@@ -1,0 +1,77 @@
+{
+    positions(
+      where: 
+      {
+        liquidity_gt:0,
+        token1:"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        token0: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      },
+      orderBy: id,
+      orderDirection: desc,
+      first:2
+    ) {
+      id
+        liquidity
+      feeGrowthInside0LastX128
+      feeGrowthInside1LastX128
+      owner
+        depositedToken0
+        depositedToken1
+      collectedFeesToken0
+      collectedFeesToken1
+      withdrawnToken0
+      withdrawnToken1
+        tickLower { 
+          tickIdx 
+          price0
+          price1
+        }
+        tickUpper { 
+          tickIdx 
+          price0
+          price1
+        }
+        pool { 
+          id 
+          liquidity
+          feeTier
+          feesUSD
+          volumeUSD
+        }
+        token0 {
+          symbol
+          decimals
+        }
+        token1 {
+          symbol
+          decimals
+        }
+      transaction{
+        timestamp
+        mints{
+          amount
+          amount0
+          amount1
+          tickLower
+          tickUpper
+          amountUSD
+        }
+      }
+      }
+    poolDayDatas(
+      where:
+      {
+        pool:"0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8"
+      },
+      orderBy:date,
+      orderDirection:desc,
+      first:3
+    ){
+    date
+      token0Price
+      token1Price
+      volumeUSD
+      volumeToken0
+      volumeToken1
+    }
+  }
