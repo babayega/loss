@@ -90,6 +90,10 @@ async function getPoolData() {
     pool_pos['current_sqrt_price'] = parseInt(pool["sqrtPrice"]) / (2 ** 96)    
 }
 
+async function exitPosition() {
+  
+}
+
 
 async function run() {
   //wss://api.thegraph.com:8443/subgraphs/name/mavvverick/dov-eth
