@@ -41,8 +41,8 @@ contract LiquidityProvider is IERC721Receiver {
     // Implementing `onERC721Received` so this contract can receive custody of erc721 tokens
     // Note that the operator is recorded as the owner of the deposited NFT
     function onERC721Received(
-        address operator,
         address,
+        address owner,
         uint256 tokenId,
         bytes calldata
     ) external override returns (bytes4) {
@@ -50,7 +50,7 @@ contract LiquidityProvider is IERC721Receiver {
             msg.sender == address(nonfungiblePositionManager),
             "not a univ3 nft"
         );
-        _createDeposit(operator, tokenId);
+        _createDeposit(owner, tokenId);
         return this.onERC721Received.selector;
     }
 
