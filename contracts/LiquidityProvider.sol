@@ -2,6 +2,8 @@
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "./libraries/TransferHelper.sol";
@@ -24,6 +26,7 @@ contract LiquidityProvider is IERC721Receiver {
 
     /// @dev deposits[tokenId] => Deposit
     mapping(uint256 => Deposit) public deposits;
+    mapping(address => uint256) public tokenIDs;
 
     constructor(
         address _token0,
@@ -73,6 +76,8 @@ contract LiquidityProvider is IERC721Receiver {
             token0: token0,
             token1: token1
         });
+
+        tokenIDs[owner] = tokenId;
     }
 
     /// @notice Calls the mint function defined in periphery, mints the same amount of each token.
@@ -81,7 +86,7 @@ contract LiquidityProvider is IERC721Receiver {
     /// @return liquidity The amount of liquidity for the position
     /// @return amount0 The amount of token0
     /// @return amount1 The amount of token1
-    function mintNewPosition()
+    function mintNewPosition(uint256 _amount0, uint256 _amount1)
         external
         returns (
             uint256 tokenId,
@@ -92,8 +97,8 @@ contract LiquidityProvider is IERC721Receiver {
     {
         // For this example, we will provide equal amounts of liquidity in both assets.
         // Providing liquidity in both assets means liquidity will be earning fees and is considered in-range.
-        uint256 amount0ToMint = 1000;
-        uint256 amount1ToMint = 1000;
+        uint256 amount0ToMint = _amount0;
+        uint256 amount1ToMint = _amount1;
 
         // transfer tokens to contract
         TransferHelper.safeTransferFrom(
@@ -135,7 +140,7 @@ contract LiquidityProvider is IERC721Receiver {
                 amount0Min: 0,
                 amount1Min: 0,
                 recipient: address(this),
-                deadline: block.timestamp
+                deadline: block.timestamp + 600
             });
 
         // Note that the pool defined by TOKEN0/TOKEN1 with POOL_FEE fee tier must already be created and initialized in order to mint
@@ -201,6 +206,7 @@ contract LiquidityProvider is IERC721Receiver {
         external
         returns (uint256 amount0, uint256 amount1)
     {
+        console.log(msg.sender, deposits[tokenId].owner);
         // caller must be the owner of the NFT
         require(msg.sender == deposits[tokenId].owner, "Not the owner");
         // get liquidity data for tokenId
@@ -222,8 +228,48 @@ contract LiquidityProvider is IERC721Receiver {
         (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(
             params
         );
+    }
 
-        // send liquidity back to owner
+    /// @notice A function that exits the current position and transfers the received amount to owner
+    /// @param tokenId The id of the erc721 token
+    /// @return amount0 The amount received back in token0
+    /// @return amount1 The amount returned back in token1
+    function exitPosition(uint256 tokenId)
+        external
+        returns (uint256 amount0, uint256 amount1)
+    {
+        // caller must be the owner of the NFT
+        require(msg.sender == deposits[tokenId].owner, "Not the owner");
+        // get liquidity data for tokenId
+        uint128 liquidity = deposits[tokenId].liquidity;
+
+        // amount0Min and amount1Min are price slippage checks
+        // if the amount received after burning is not greater than these minimums, transaction will fail
+        INonfungiblePositionManager.DecreaseLiquidityParams
+            memory params = INonfungiblePositionManager
+                .DecreaseLiquidityParams({
+                    tokenId: tokenId,
+                    liquidity: liquidity,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: block.timestamp
+                });
+
+        (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(
+            params
+        );
+
+        INonfungiblePositionManager.CollectParams
+            memory collectParams = INonfungiblePositionManager.CollectParams({
+                tokenId: tokenId,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            });
+
+        (amount0, amount1) = nonfungiblePositionManager.collect(collectParams);
+
+        // send collected fees back to owner
         _sendToOwner(tokenId, amount0, amount1);
     }
 

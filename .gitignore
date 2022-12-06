@@ -1,2 +1,6 @@
 node_modules
 .vscode
+.env
+typechain-types
+cache
+artifacts
